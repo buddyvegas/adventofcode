@@ -26,14 +26,22 @@ const isSafeDecrease = (report: number[]) => {
   });
 }
 
-const safeIncrease = data.reduce((count, report) => {
-  const isSafe = isSafeIncreate(report);
-  return count + (isSafe ? 1 : 0);
+const isSafe = data.reduce((count, report) => {
+  const isSafe = isSafeIncreate(report) || isSafeDecrease(report);
+  if (isSafe) {
+    return count + 1;
+  }
+
+  const indexesToIgnore = report.map((value, index) => index);
+  for(const indexToIgnore of indexesToIgnore) {
+    const newReport = report.filter((_, index) => index !== indexToIgnore);
+    if (isSafeIncreate(newReport) || isSafeDecrease(newReport)) {
+      return count + 1;
+    }
+  }
+
+  return count;
 }, 0);
 
-const safeDecrease = data.reduce((count, report) => {
-  const isSafe = isSafeDecrease(report);
-  return count + (isSafe ? 1 : 0);
-}, 0);
 
-console.log(safeIncrease + safeDecrease);
+console.log(isSafe);
