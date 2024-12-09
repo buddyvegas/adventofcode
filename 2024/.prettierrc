@@ -4,5 +4,6 @@
   "trailingComma": "all",
   "singleQuote": true,
   "proseWrap": "never",
-  "printWidth": 150
+  "printWidth": 150,
+  "tabWidth": 2
 }
