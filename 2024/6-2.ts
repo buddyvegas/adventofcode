@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import readline from 'node:readline';
 
-const input = '6.sample.in';
+const input = '6.in';
 
 type Direction = [0, -1] | [1, 0] | [0, 1] | [-1, 0];
 type Position = number[];
@@ -9,6 +9,7 @@ type Map = string[][];
 
 const CRATE = '#';
 const GUARD = '^';
+const EMPTY = '.';
 const DIRECTION: Record<string, Direction> = {
   UP: [0, -1],
   RIGHT: [1, 0],
@@ -17,6 +18,7 @@ const DIRECTION: Record<string, Direction> = {
 };
 
 let world: Map = [];
+let initialWorld: Map = [];
 
 for await (const line of readline.createInterface({
   input: fs.createReadStream(input),
@@ -24,6 +26,7 @@ for await (const line of readline.createInterface({
   terminal: false,
 })) {
   world = [...world, [...line.split('')]];
+  initialWorld = [...initialWorld, [...line.split('')]];
 }
 
 function getInitialPosition() {
@@ -88,7 +91,7 @@ function isPassAlready(positions: Position[], position: Position) {
   return positions.some((x) => x[0] === position[0] && x[1] === position[1]);
 }
 
-function patrol(position: Position, direction: Direction) {
+function initialPatrol(position: Position, direction: Direction) {
   let positions: Position[] = [position];
 
   while (isInBound(position)) {
@@ -101,8 +104,70 @@ function patrol(position: Position, direction: Direction) {
   return positions;
 }
 
-let initialDirection = DIRECTION.UP;
-let initialPosition = getInitialPosition()!;
-let distinctPositions: Position[] = [...patrol(initialPosition, initialDirection)];
+function isOnLoop(positionsWithDirections: [Position, Direction][], position: Position, direction: Direction) {
+  const target = [position, direction];
+  return positionsWithDirections.some(
+    (pair) =>
+      pair.length === target.length &&
+      pair.every(
+        (subArray, index) => subArray.length === target[index].length && subArray.every((value, subIndex) => value === target[index][subIndex]),
+      ),
+  );
+}
 
-console.log({ result: distinctPositions.length });
+function patrol(position: Position, direction: Direction) {
+  let isLoop = false;
+  let positionsWithDirections: [Position, Direction][] = [[position, direction]];
+
+  while (isInBound(position)) {
+    [position, direction] = step(position, direction);
+    if (/*!isPassAlready(positions, position) &&*/ isInBound(position)) {
+      if (isOnLoop(positionsWithDirections, position, direction)) {
+        isLoop = true;
+        break;
+      }
+      positionsWithDirections = [...positionsWithDirections, [position, direction]];
+    }
+  }
+
+  return isLoop;
+}
+
+const initialDirection = DIRECTION.UP;
+const initialPosition = getInitialPosition()!;
+let result = 0;
+
+// function addCrate(position: Position) {
+//   let newWorld = [...world];
+//   const [x, y] = position;
+
+//   newWorld[y][x] = CRATE;
+
+//   return newWorld;
+// }
+
+let distinctPositions: Position[] = [...initialPatrol(initialPosition, initialDirection)];
+let previousCratePosition: Position = [];
+let current = 0;
+
+for (let newCratePosition of distinctPositions) {
+  current++;
+
+  console.log(`${current} / ${distinctPositions.length}`);
+
+  world[newCratePosition[1]][newCratePosition[0]] = CRATE;
+
+  const isLoop = patrol(initialPosition, initialDirection);
+  if (isLoop) {
+    world[newCratePosition[1]][newCratePosition[0]] = 'O';
+    result += 1;
+  }
+
+  if (previousCratePosition.length > 0) {
+    world[previousCratePosition[1]][previousCratePosition[0]] = EMPTY;
+  }
+
+  previousCratePosition = [...newCratePosition];
+}
+
+console.log({ result });
